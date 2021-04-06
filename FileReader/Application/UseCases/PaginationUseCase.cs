@@ -41,7 +41,7 @@ namespace FileReader.Application.UseCases
                     break;
                 case FluxoTextual.LinhaDesejada:
                 case FluxoTextual.Nenhum:
-                    file = await _documentoCacheRepository.GetTextoAsync(FluxoTextual.LinhaDesejada, entrada, 0);
+                    file = await ProcessIteratorPesquisaAsync(fluxo, entrada, _parameters.PesquisaQuantidadeLinhasPercorrida);
                     break;
             }
 
@@ -52,6 +52,18 @@ namespace FileReader.Application.UseCases
             model.LinhaFinalAtual = file.Pagination.LinhaFinalAtual;
 
             return model;
+        }
+
+        private async Task<FileEntity> ProcessIteratorPesquisaAsync(FluxoTextual fluxo, int linhaProcurada, int qtdLinhas)
+        {
+            var pagination = new PaginationEntity();
+
+            pagination.CalcularPesquisaLinhas(linhaProcurada, qtdLinhas, _parameters.QuantidadeLinhasExibicao);
+            var file = await _documentoCacheRepository.GetTextoAsync(fluxo, pagination.LinhaInicialNovo, pagination.LinhaFinalNovo);
+
+            return file;
+
+
         }
 
         private async Task<FileEntity> ProcessIteratorBackAsync(FluxoTextual fluxo, int qtdLinhas)
@@ -65,10 +77,10 @@ namespace FileReader.Application.UseCases
 
         private async Task<FileEntity> ProcessIteratorFowardAsync(FluxoTextual fluxo, int qtdLinhas)
         {
-           var pagination = await _documentoCacheRepository.GetCurrentPaginationAsync();
+            var pagination = await _documentoCacheRepository.GetCurrentPaginationAsync();
             pagination.CalcularProximasLinhas(qtdLinhas);
             var file = await _documentoCacheRepository.GetTextoAsync(fluxo, pagination.LinhaInicialNovo, pagination.LinhaFinalNovo);
-            
+
             return file;
         }
     }

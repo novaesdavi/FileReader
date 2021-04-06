@@ -80,7 +80,8 @@ namespace FileReader.Infra.Repository
             else if (fluxoTexto == FluxoTextual.LinhaDesejada && linhaFinal == 0 && linhaInicial > 0)
             {
                 MemoryFileReaderCache.Pagination.FinalArquivo = false;
-                await ReloadCacheAsync(linhaInicial);
+                int linhaDesejada = linhaInicial - _parameters.PesquisaQuantidadeLinhasPercorrida;
+                await ReloadCacheAsync(linhaInicial - _parameters.PesquisaQuantidadeLinhasPercorrida);
 
                 MemoryFileReaderCache.Pagination.LinhaInicialPaginaAtual = linhaInicial;
                 MemoryFileReaderCache.Pagination.LinhaFinalPaginaAtual = linhaInicial + _parameters.PageQuantidadeLinhasPercorrida;

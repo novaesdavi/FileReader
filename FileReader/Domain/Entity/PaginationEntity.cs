@@ -56,5 +56,19 @@ namespace FileReader.Domain.Entity
                 LinhaFinalNovo = tamanhoMinimo;
             }
         }
+
+        internal void CalcularPesquisaLinhas(int linhaProcurada, int quantidadeLinhasExibicao, int tamanhoMinimo)
+        {
+            if ((linhaProcurada - quantidadeLinhasExibicao) > 0)
+            {                
+                LinhaInicialNovo = linhaProcurada - quantidadeLinhasExibicao;
+                LinhaFinalNovo = linhaProcurada + quantidadeLinhasExibicao;
+            }
+            else
+            {
+                LinhaInicialNovo = 1;
+                LinhaFinalNovo = tamanhoMinimo;
+            }
+        }
     }
 }

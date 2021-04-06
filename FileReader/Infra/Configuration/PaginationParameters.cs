@@ -7,6 +7,7 @@ namespace FileReader.Infra.Configuration
     public class PaginationParameters
     {
         public int TamanhoMaximoCache { get; set; }
+        public int PesquisaQuantidadeLinhasPercorrida { get; set; }
         public int QuantidadeLinhasExibicao { get; set; }
         public int ArrowQuantidadeLinhasPercorrida { get; set; }
         public int PageQuantidadeLinhasPercorrida { get; set; }
