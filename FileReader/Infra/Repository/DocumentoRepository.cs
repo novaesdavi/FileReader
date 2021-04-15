@@ -1,6 +1,7 @@
 ﻿using FileReader.Application.RepositoryInterfaces;
 using FileReader.Domain.Entity;
 using FileReader.Infra.Configuration;
+using Nest;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +12,13 @@ using System.Threading.Tasks;
 
 namespace FileReader.Infra.Repository
 {
-    public class DocumentoRepository : IDisposable, IDocumentoRepository
+
+    public class LivroTexto
+    {
+        public string Texto { get; set; }
+        public int Linha { get; set; }
+    }
+    public class DocumentoRepository : IDocumentoRepository
     {
         string _arquivo = null;
         int quantidadeLeitura = 0;
@@ -29,6 +36,42 @@ namespace FileReader.Infra.Repository
 
         public async Task<List<FileContentEntity>> GetFileStreamAsync(string arquivo, int linhaIncial, int linhaFinal)
         {
+            GetFromElasticSearch(arquivo, linhaIncial, linhaFinal);
+            GetFromElasticSearchScroll(arquivo, linhaIncial, linhaFinal);
+
+            return GetFromArquivoAsync(arquivo, linhaIncial, linhaFinal);
+        }
+
+        private void GetFromElasticSearch(string arquivo, int linhaIncial, int linhaFinal)
+        {
+            var settings = new ConnectionSettings(new Uri("http://localhost:9200"))
+                .DefaultIndex("livro_*")//arquivo
+                .DefaultFieldNameInferrer(p => p);
+
+            var client = new ElasticClient(settings);
+
+            var searchResponse = client.Search<FileContentEntity>(
+                s => s.From(linhaIncial).Size(_parameters.QuantidadeLinhasExibicao).Sort(ss => ss.Ascending(f => f.Linha)));
+
+            var file = searchResponse.Documents;
+        }
+
+        private void GetFromElasticSearchScroll(string arquivo, int linhaIncial, int linhaFinal)
+        {
+            var settings = new ConnectionSettings(new Uri("http://localhost:9200"))
+                .DefaultIndex("livro_*")//arquivo
+                .DefaultFieldNameInferrer(p => p);
+
+            var client = new ElasticClient(settings);
+
+            var searchResponse = client.Search<FileContentEntity>(
+                s => s.From(linhaIncial).Size(_parameters.QuantidadeLinhasExibicao).Sort(ss => ss.Ascending(f => f.Linha)));
+
+            var file = searchResponse.Documents;
+        }
+
+        private List<FileContentEntity> GetFromArquivoAsync(string arquivo, int linhaIncial, int linhaFinal)
+        {
             List<FileContentEntity> ConteudoArquivo = new List<FileContentEntity>();
 
             if (ValidaExistenciaArquivo(arquivo))
@@ -36,7 +79,7 @@ namespace FileReader.Infra.Repository
                 using (FileStream fs = File.Open($"{_parameters.CaminhoArquivo}{arquivo}", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
                     using (StreamReader reader = new StreamReader(fs, Encoding.Default, false, 1024))
-                    {                        
+                    {
                         string itemLine;
                         int linhaAtual = 1;
 
@@ -98,86 +141,5 @@ namespace FileReader.Infra.Repository
                 return false;
         }
 
-        public async Task<string> GetPagedFowardFileStreamAsync()
-        {
-            using (FileStream fs = File.Open($"{_parameters.CaminhoArquivo}{_arquivo}", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                fs.Seek(NextPage, SeekOrigin.Begin);
-                using (StreamReader reader = new StreamReader(fs, Encoding.Default, false, 1024))
-                {
-                    StringBuilder linhasDesejadas = new StringBuilder();
-                    string itemLine;
-                    quantidadeLeitura = 0;
-                    while ((itemLine = reader.ReadLine()) != null && quantidadeLeitura < 2)
-                    {
-                        linhasDesejadas.AppendLine(itemLine);
-                        quantidadeLeitura++;
-                    }
-
-                    PreviousTotalPage = CurrentPage;
-                    CurrentPage = NextPage;
-                    NextPage = CurrentPage + linhasDesejadas.Length;
-
-
-
-                    return linhasDesejadas.ToString();
-
-                    //Console.WriteLine($"Tamanho Total: {System.Text.ASCIIEncoding.ASCII.GetByteCount(linhasDesejadas.ToString())}");
-                    //Console.WriteLine($"Linhas Lidas: {quantidadeLeitura}");
-                    //Console.WriteLine($"Memoria: {((decimal)System.Diagnostics.Process.GetCurrentProcess().PrivateMemorySize64 / 1000000)}");
-
-                    //Console.WriteLine(linhasDesejadas.ToString());
-                }
-            }
-
-        }
-
-        public async Task<string> GetPagedBackFileStreamAsync()
-        {
-            if (PreviousTotalPage >= 0)
-            {
-
-                using (FileStream fs = File.Open($"{_parameters.CaminhoArquivo}{_arquivo}", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    quantidadeLeitura = 0;
-                    fs.Seek(PreviousTotalPage, SeekOrigin.Begin);
-                    using (StreamReader reader = new StreamReader(fs, Encoding.Default, false, 1024))
-                    {
-                        StringBuilder linhasDesejadas = new StringBuilder();
-                        string itemLine;
-
-                        while ((itemLine = reader.ReadLine()) != null && quantidadeLeitura < 2)
-                        {
-                            linhasDesejadas.AppendLine(itemLine);
-                            quantidadeLeitura++;
-                        }
-
-
-
-                        CurrentPage = PreviousTotalPage;
-                        NextPage = CurrentPage + linhasDesejadas.Length;
-                        if (CurrentPage > 0)
-                            PreviousTotalPage = NextPage - linhasDesejadas.Length;
-
-
-                        return linhasDesejadas.ToString();
-
-                        //Console.WriteLine($"Tamanho Total: {System.Text.ASCIIEncoding.ASCII.GetByteCount(linhasDesejadas.ToString())}");
-                        //Console.WriteLine($"Linhas Lidas: {quantidadeLeitura}");
-                        //Console.WriteLine($"Memoria: {((decimal)System.Diagnostics.Process.GetCurrentProcess().PrivateMemorySize64 / 1000000)}");
-
-                        //Console.WriteLine(linhasDesejadas.ToString());
-                    }
-                }
-            }
-
-            return null;
-
-        }
-
-        public void Dispose()
-        {
-            
-        }
     }
 }

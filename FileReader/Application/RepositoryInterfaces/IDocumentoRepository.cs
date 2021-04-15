@@ -10,7 +10,5 @@ namespace FileReader.Application.RepositoryInterfaces
     {
         Task<List<FileContentEntity>> GetFileStreamAsync(string arquivo, int linhaIncial, int linhaFinal);
         Task<FileEntity> GetFileStreamInicialAsync(string arquivo);
-        Task<string> GetPagedFowardFileStreamAsync();
-        Task<string> GetPagedBackFileStreamAsync();
     }
 }
